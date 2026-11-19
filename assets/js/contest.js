@@ -27,8 +27,9 @@ export function contestInfo(config, now = Date.now()) {
  * Demo stickers only stand in until real stickers exist.
  */
 export function rankCards(cards, countOf, lastOf) {
-  const real = cards.filter((c) => !c.demo);
-  const pool = real.length ? real : cards;
+  const eligible = cards.filter((c) => !c.cameo);
+  const real = eligible.filter((c) => !c.demo);
+  const pool = real.length ? real : eligible;
   return pool
     .filter((c) => countOf(c) > 0)
     .sort((a, b) => countOf(b) - countOf(a)

@@ -163,7 +163,7 @@ A **pull request** (PR) asks for your changes to be added to the original projec
 Within a minute, the **🧩 Check sticker** bot reviews your pull request:
 
 - ✅ **Green check:** your sticker is ready to be merged. Once it's merged, it appears on
-  [the wall](https://stickycommits.vercel.app) about a minute later and enters the contest. 🏆
+  [the wall](https://stickycommits.vercel.app) about a minute later. Student stickers enter the contest. 🏆
 - ❌ **Red cross:** click **Details** to see what to fix. Fix it on your computer, then:
   ```bash
   git add cards/<your-username>

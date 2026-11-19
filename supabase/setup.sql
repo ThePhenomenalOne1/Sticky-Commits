@@ -15,6 +15,7 @@
 --   • The likes table is locked — the website can't read it directly.
 --   • The website only gets COUNTS, plus "which stickers did MY code like"
 --     (and only if you know that code). Nobody can list who liked what.
+--   • Manager cameos use device-only visual reactions, outside contest counts.
 --   • Likes only work on stickers that are really on the wall (the
 --     "Sync sticker list" GitHub Action keeps that list up to date).
 --
@@ -227,6 +228,14 @@ $$;
 --  LIKES
 -- ════════════════════════════════════════════════════════════════
 
+-- Manager cameos have visual reactions in the browser, not contest votes.
+create table if not exists public.cameos (
+  card_id text primary key check (card_id ~ '^[a-z0-9][a-z0-9-]{0,63}$')
+);
+insert into public.cameos (card_id) values ('thephenomenalone1') on conflict do nothing;
+alter table public.cameos enable row level security;
+revoke all on public.cameos from anon, authenticated;
+
 -- Upgrading from the old version (anonymous browser ids): those likes can't
 -- be tied to a code, so they're cleared.
 do $$
@@ -275,6 +284,7 @@ as $$
   select l.card_id, count(*)::bigint as total, max(l.created_at) as last_at
   from public.likes as l
   where public.sticker_exists(l.card_id)
+    and not exists (select 1 from public.cameos as c where c.card_id = l.card_id)
   group by l.card_id;
 $$;
 
@@ -296,6 +306,9 @@ begin
   end if;
   if p_card is null or p_card !~ '^[a-z0-9][a-z0-9-]{0,63}$' or not public.sticker_exists(p_card) then
     raise exception 'that sticker isn''t on the wall';
+  end if;
+  if exists (select 1 from public.cameos as c where c.card_id = p_card) then
+    raise exception 'manager cameos use visual reactions, not contest likes';
   end if;
   if exists (select 1 from public.contest as k where k.starts_at is not null and now() < k.starts_at) then
     raise exception 'voting has not opened yet';

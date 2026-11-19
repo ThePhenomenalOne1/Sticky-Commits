@@ -20,9 +20,9 @@ and that phone or computer remembers it. No account, no name, nothing else.
 The sticker with the **most likes** wins **a one-month Claude subscription**.
 
 - 🗓️ Voting is open from **November 13** until **December 1, 2026** (23:59, UTC+3).
-- ❤️ Your code gives you one like on each sticker, on any device. Like as many stickers as you want!
+- ❤️ Your code gives you one contest like on each student sticker, on any device. Like as many student stickers as you want!
 - 🤝 In a tie, the sticker that reached its total first wins.
-- 🧩 Every merged sticker enters automatically. (The demo stickers don't count.)
+- 🧩 Student stickers enter automatically. Manager cameos and demo stickers stay outside the contest; cameo hearts are visual reactions saved on each visitor's device.
 
 The sooner your sticker is on the wall, the more time people have to like it. 😉
 

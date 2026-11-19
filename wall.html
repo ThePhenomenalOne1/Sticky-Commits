@@ -18,7 +18,9 @@
     // 🎟️ hide the page until a code is entered (see assets/js/access.js)
     try {
       var sb = (window.STICKER_WALL || {}).supabase || {};
-      if (sb.url && sb.anonKey && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+      var cameoId = new URLSearchParams(location.search).get('cameo');
+      var publicCameo = ((window.STICKER_WALL || {}).cameos || []).includes(cameoId);
+      if (sb.url && sb.anonKey && !publicCameo && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
           && !/^"?\d{6}"?$/.test(localStorage.getItem('sw:code') || '')) document.documentElement.classList.add('gated');
     } catch (e) {}
   </script>

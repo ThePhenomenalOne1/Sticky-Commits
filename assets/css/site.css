@@ -862,6 +862,12 @@ html.exploring { overflow: hidden; }
   opacity: .75;
   pointer-events: none;
 }
+.cameo-tag {
+  background: linear-gradient(110deg, #ffe99d, #b87a27);
+  color: #20172b;
+  opacity: 1;
+  rotate: 5deg;
+}
 
 .canvas-msg {
   position: absolute;

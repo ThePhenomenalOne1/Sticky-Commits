@@ -2,7 +2,7 @@
 //  wall.html — the full-screen, explorable sticker board
 // ═══════════════════════════════════════════════════════════════
 import { stickerReady } from './sticker.js';
-import { createAccess } from './access.js';
+import { createAccess, cameoLinkId } from './access.js';
 import { createLikes } from './likes.js';
 import { createComments, COMMENT_MAX } from './comments.js';
 import { createAdmin } from './admin.js';
@@ -15,6 +15,7 @@ import { burst, confetti } from './fx.js';
 import { config, $, $$, hashNum, applySiteText, initTheme, toast } from './common.js';
 
 const access = createAccess(config);
+const cameoId = cameoLinkId(config);
 const likes = createLikes(config, access);
 const comments = createComments(config, access);
 const tally = createTally(likes);
@@ -52,6 +53,8 @@ const camera = createCamera(viewport, world, {
 camera.setExploring(true); // this page is all board: the wheel zooms, one finger pans
 
 const slotOf = (id) => document.getElementById(`sticker-${id}`);
+const cameoKey = (id) => `sw:cameo-reaction:${id}`;
+const cameoLiked = (id) => store.get(cameoKey(id), false) === true;
 
 // ── boot ───────────────────────────────────────────────────────
 applySiteText();
@@ -75,12 +78,12 @@ try {
     positions.load().catch((err) => { console.warn(err); return {}; }),
     stickerReady,
   ]);
-  state.cards = cards;
-  state.byId = new Map(cards.map((c) => [c.id, c]));
+  state.cards = cameoId ? cards.filter((c) => c.id === cameoId) : cards;
+  state.byId = new Map(state.cards.map((c) => [c.id, c]));
   state.positions = placed;
   renderBoard();
   if (new URLSearchParams(location.search).has('arrange') && admin.signedIn()) setArranging(true);
-  await syncMyLikes();
+  if (!cameoId) await syncMyLikes();
   await refreshCounts();
   openFromHash();
 } catch (err) {
@@ -88,7 +91,7 @@ try {
   showMessage('error', err);
 }
 
-if (likes.mode === 'shared') {
+if (likes.mode === 'shared' && !cameoId) {
   setInterval(() => { if (document.visibilityState === 'visible') refreshCounts(); }, 20000);
 }
 
@@ -119,6 +122,10 @@ function codeStopped() {
 }
 
 async function refreshCounts() {
+  if (cameoId) {
+    for (const card of state.cards) paintLike(card, false);
+    return;
+  }
   const [l, c] = await Promise.allSettled([tally.refresh(), comments.counts()]);
   if (c.status === 'fulfilled') state.talkCounts = c.value;
   if (l.status === 'rejected' || c.status === 'rejected') {
@@ -132,8 +139,8 @@ async function refreshCounts() {
 function paintContestChip() {
   const chip = $('#contest-chip');
   const info = contestInfo(config);
-  chip.hidden = !info.enabled;
-  if (!info.enabled) return;
+  chip.hidden = !info.enabled || !!cameoId;
+  if (!info.enabled || cameoId) return;
   chip.textContent = `🏆 ${shortLeft(info)}`;
   chip.title = info.phase === 'running' ? `Most likes by ${fmtDate(info.end)} wins ${info.prize}` : '';
 }
@@ -163,6 +170,7 @@ function renderBoard() {
     like.type = 'button';
     like.className = 'like';
     like.innerHTML = `${HEART}<span class="n">0</span>`;
+    if (card.cameo) like.title = 'A visual reaction on this device · not a contest vote';
     like.addEventListener('click', () => toggleLike(card, like));
 
     const talkBtn = document.createElement('button');
@@ -170,6 +178,7 @@ function renderBoard() {
     talkBtn.className = 'talk-btn';
     talkBtn.innerHTML = `${BUBBLE}<span class="n">0</span>`;
     talkBtn.addEventListener('click', () => openComments(card));
+    if (cameoId) talkBtn.hidden = true;
 
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -180,6 +189,7 @@ function renderBoard() {
       slot.append(Object.assign(document.createElement('span'), { className: 'new-badge', textContent: 'NEW!' }));
     }
     if (card.demo) slot.append(Object.assign(document.createElement('span'), { className: 'demo-tag', textContent: 'demo' }));
+    if (card.cameo) slot.append(Object.assign(document.createElement('span'), { className: 'demo-tag cameo-tag', textContent: 'cameo · not in contest' }));
     world.append(slot);
     paintLike(card, false);
     paintTalk(card);
@@ -191,7 +201,11 @@ function renderBoard() {
   void world.offsetWidth;
   world.classList.remove('no-anim');
   // start a little zoomed-in so there's something to explore (the minimap shows the rest)
-  camera.fit(undefined, { animate: false, min: viewport.clientWidth < 640 ? 0.45 : 0.62 });
+  camera.fit(undefined, {
+    animate: false,
+    min: viewport.clientWidth < 640 ? 0.45 : 0.62,
+    max: cameoId ? 1.4 : 1,
+  });
   observeSlots();
 }
 
@@ -597,10 +611,12 @@ async function renderTalkList(card) {
 function paintLike(card, bump = true) {
   const btn = slotOf(card.id)?.querySelector('.like');
   if (!btn) return;
-  const n = tally.count(card);
-  const on = likes.isLiked(card.id);
+  const n = card.cameo ? Number(cameoLiked(card.id)) : tally.count(card);
+  const on = card.cameo ? cameoLiked(card.id) : likes.isLiked(card.id);
   btn.setAttribute('aria-pressed', String(on));
-  btn.setAttribute('aria-label', `${on ? 'Unlike' : 'Like'} ${card.name}'s sticker (${n} ${n === 1 ? 'like' : 'likes'})`);
+  btn.setAttribute('aria-label', card.cameo
+    ? `${on ? 'Remove your reaction from' : 'React to'} ${card.name}'s manager cameo (saved on this device; not a contest vote)`
+    : `${on ? 'Unlike' : 'Like'} ${card.name}'s sticker (${n} ${n === 1 ? 'like' : 'likes'})`);
   const label = btn.querySelector('.n');
   if (label.textContent !== String(n)) {
     label.textContent = n;
@@ -609,6 +625,17 @@ function paintLike(card, bump = true) {
 }
 
 async function toggleLike(card, btn) {
+  if (card.cameo) {
+    const on = !cameoLiked(card.id);
+    store.set(cameoKey(card.id), on);
+    paintLike(card);
+    if (on) {
+      btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop');
+      const r = btn.getBoundingClientRect();
+      burst(r.left + r.width / 2, r.top + r.height / 2);
+    }
+    return;
+  }
   const info = contestInfo(config);
   if (info.enabled && !info.votingOpen) {
     if (info.phase === 'before') toast(`🗓️ Voting opens ${fmtDate(info.start)} — get your sticker in first!`, 3200);
@@ -674,7 +701,9 @@ function wireToolbar() {
   });
 
   document.addEventListener('sticker-share', async (e) => {
-    const url = new URL(`wall.html#sticker-${e.detail.id}`, location.href).href;
+    const card = state.byId.get(e.detail.id);
+    const path = card?.cameo ? `wall.html?cameo=${encodeURIComponent(card.id)}` : `wall.html#sticker-${e.detail.id}`;
+    const url = new URL(path, location.href).href;
     try {
       await navigator.clipboard.writeText(url);
       toast('Link copied — go share the love 💌');

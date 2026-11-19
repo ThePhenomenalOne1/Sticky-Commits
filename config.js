@@ -18,6 +18,9 @@ window.STICKER_WALL = {
   repo: 'ahmedmaaruf/Sticky-Commits',
   branch: 'main',
 
+  // Public manager cameos are for fun, outside the sticker contest.
+  cameos: ['thephenomenalone1'],
+
   // Demo stickers: true, false, or 'auto' (shown only until 5 real stickers exist).
   showDemoCards: 'auto',
 

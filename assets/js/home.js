@@ -349,7 +349,11 @@ function renderRace() {
 }
 
 async function shareSticker(e) {
-  const url = new URL(`wall.html#sticker-${e.detail.id}`, location.href).href;
+  const id = e.detail.id;
+  const path = (config.cameos || []).includes(id)
+    ? `wall.html?cameo=${encodeURIComponent(id)}`
+    : `wall.html#sticker-${id}`;
+  const url = new URL(path, location.href).href;
   try {
     await navigator.clipboard.writeText(url);
     toast('Link copied — go share the love 💌');

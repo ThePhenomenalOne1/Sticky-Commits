@@ -17,6 +17,13 @@ const KEY = 'sw:code';
 const isLocalHost = () => ['localhost', '127.0.0.1', '[::1]', ''].includes(location.hostname);
 const VALID = /^[0-9]{6}$/;
 
+/** A public, single-card manager cameo link. It never grants voting access. */
+export function cameoLinkId(config = {}) {
+  if (!location.pathname.endsWith('/wall.html')) return null;
+  const id = new URLSearchParams(location.search).get('cameo');
+  return (config.cameos || []).includes(id) ? id : null;
+}
+
 export function createAccess(config = {}) {
   const db = supabase(config);
   let code = db ? store.get(KEY, null) : null;
@@ -58,7 +65,7 @@ export function createAccess(config = {}) {
     },
     /** Page load: on the real website nothing shows until a code is entered. */
     async gate() {
-      if (!db || code || isLocalHost()) { unlockPage(); return; }
+      if (!db || code || isLocalHost() || cameoLinkId(config)) { unlockPage(); return; }
       await show({ dismissible: false });
     },
   };

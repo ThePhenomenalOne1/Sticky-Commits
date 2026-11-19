@@ -7,7 +7,12 @@ export async function loadCards(config) {
   const res = await fetch('cards.json', { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load cards.json (${res.status})`);
   const data = await res.json();
-  const all = (data.cards || []).map(normalizeCard);
+  const cameos = new Set(config.cameos || []);
+  const all = (data.cards || []).map((raw) => {
+    const card = normalizeCard(raw);
+    card.cameo = cameos.has(card.id);
+    return card;
+  });
   const real = all.filter((c) => !c.demo);
   const mode = config.showDemoCards ?? 'auto';
   const showDemos = mode === true || (mode === 'auto' && real.length < 5);
